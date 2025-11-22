@@ -12,7 +12,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Missing data" }, { status: 400 });
         }
 
-        addPulse({
+        await addPulse({
             movieId,
             title: movieData.title,
             posterPath: movieData.poster_path,
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
     try {
-        const pulses = getPulses();
+        const pulses = await getPulses();
         return NextResponse.json({ pulses });
     } catch (error) {
         console.error(error);
