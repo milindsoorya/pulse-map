@@ -22,21 +22,45 @@ interface NearbyPulse {
     distance: number;
 }
 
+interface Pulse {
+    id: string;
+    title: string;
+    type: 'MOVIE' | 'TOPIC';
+    latitude: number;
+    longitude: number;
+    reactionType: string;
+    reaction_type?: string; // For DB compatibility
+    comment?: string;
+    link?: string;
+    created_at?: number;
+    pulse_count?: number;
+    distance?: number;
+}
+
+interface SearchResult {
+    id: string | number;
+    title: string;
+    type: 'MOVIE' | 'TOPIC';
+    isTopic?: boolean;
+    poster_path?: string;
+}
+
 export default function PulseOverlay() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<any>(null);
+    const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
     const [isPulsing, setIsPulsing] = useState(false);
     const [showTrending, setShowTrending] = useState(false);
     const [showNearby, setShowNearby] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedPulse, setSelectedPulse] = useState<any>(null);
+    const [selectedPulse, setSelectedPulse] = useState<Pulse | null>(null);
 
     useEffect(() => {
-        const handleOpenDetail = (e: any) => {
-            setSelectedPulse(e.detail);
+        const handleOpenDetail = (e: Event) => {
+            const customEvent = e as CustomEvent<Pulse>;
+            setSelectedPulse(customEvent.detail);
         };
         window.addEventListener('open-pulse-detail', handleOpenDetail);
         return () => window.removeEventListener('open-pulse-detail', handleOpenDetail);
@@ -98,14 +122,16 @@ export default function PulseOverlay() {
     }, [searchQuery]);
 
     const handlePulseClick = () => {
-        const item = selectedItem || { title: searchQuery, type: 'TOPIC' };
+        const fallbackItem: SearchResult = { id: 'new-topic', title: searchQuery, type: 'TOPIC', isTopic: true };
+        const item = selectedItem || fallbackItem;
         if (!item.title) return;
         setIsModalOpen(true);
     };
 
     const handleModalSubmit = async (data: { reactionType: string; comment: string; link: string }) => {
         setIsModalOpen(false);
-        const item = selectedItem || { title: searchQuery, type: 'TOPIC' };
+        const fallbackItem: SearchResult = { id: 'new-topic', title: searchQuery, type: 'TOPIC', isTopic: true };
+        const item = selectedItem || fallbackItem;
         if (!item.title) return;
 
         setIsPulsing(true);
@@ -114,7 +140,7 @@ export default function PulseOverlay() {
                 const { latitude, longitude } = pos.coords;
                 console.log('PulseOverlay: Got location', { latitude, longitude });
 
-                const newPulse = {
+                const newPulse: Pulse = {
                     id: `temp-${Date.now()}`,
                     title: item.title,
                     type: item.isTopic ? 'TOPIC' : 'MOVIE',

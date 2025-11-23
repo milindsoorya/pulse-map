@@ -84,16 +84,22 @@ export default function Map3D() {
             .addTo(map.current);
 
         // Add event listener to popup content for "Click for details"
-        marker.getPopup().on('open', () => {
-            const content = marker.getPopup().getElement().querySelector('.mapboxgl-popup-content');
-            if (content) {
-                content.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('open-pulse-detail', { detail: pulse }));
-                });
-                content.style.cursor = 'pointer';
-            }
-        });
+        const markerPopup = marker.getPopup();
+        if (markerPopup) {
+            markerPopup.on('open', () => {
+                const element = markerPopup?.getElement();
+                if (!element) return;
+
+                const content = element.querySelector('.mapboxgl-popup-content') as HTMLElement;
+                if (content) {
+                    content.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('open-pulse-detail', { detail: pulse }));
+                    });
+                    content.style.cursor = 'pointer';
+                }
+            });
+        }
 
         markersRef.current[pulse.id] = marker;
     };
@@ -230,27 +236,27 @@ export default function Map3D() {
             />
 
             <style jsx global>{`
-                @keyframes pulse-animation {
-                    0% { transform: scale(1); opacity: 0.8; }
+                @keyframes pulse - animation {
+                0% { transform: scale(1); opacity: 0.8; }
                     50% { transform: scale(1.5); opacity: 0.4; }
                     100% { transform: scale(1); opacity: 0.8; }
-                }
-                .glass-popup .mapboxgl-popup-content {
+            }
+                .glass - popup.mapboxgl - popup - content {
                     background: rgba(0, 0, 0, 0.8);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    color: white;
-                    border-radius: 8px;
-                    padding: 0;
-                }
-                .pulse-marker {
-                    /* Only essential styles here, let Mapbox handle position */
-                    pointer-events: auto;
-                }
-                .glass-popup .mapboxgl-popup-tip {
-                    border-top-color: rgba(0, 0, 0, 0.8);
-                }
-            `}</style>
+                    backdrop- filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border - radius: 8px;
+        padding: 0;
+    }
+                .pulse - marker {
+        /* Only essential styles here, let Mapbox handle position */
+        pointer - events: auto;
+    }
+                .glass - popup.mapboxgl - popup - tip {
+        border - top - color: rgba(0, 0, 0, 0.8);
+    }
+    `}</style>
         </div>
     );
 }
