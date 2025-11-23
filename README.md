@@ -1,84 +1,46 @@
-# CinePulse 🌍❤️
+# 🌍 Pulse Map
 
-**CinePulse** is a real-time cultural map that visualizes movie reactions across the globe. Users can "pulse" (heart) movies, and these reactions are displayed instantly on an interactive 3D globe.
+> **A real-time, global pulse of movies, music, memes, topics, and events—visualized on an interactive world map.**
 
-![CinePulse Demo](https://via.placeholder.com/800x400?text=CinePulse+Map+Preview)
+## 🧭 Vision
+See what the world feels right now. No clutter, just the pulse of the planet.
 
-## 🚀 Features
+## 🚀 Roadmap
 
-- **Interactive 3D Map**: Built with Mapbox GL, featuring smooth zoom and pan interactions.
-- **Real-time Pulses**: "Heart" a movie to add your location to the global map.
-- **Local Discovery**: Zoom into any region to see a side panel of movies trending in that specific area.
-- **Guest Mode**: No login required. Anyone can explore and contribute immediately.
-- **Cloud Database**: Powered by **Turso** (LibSQL) for fast, edge-ready data storage.
+### 🎯 Version 1 (Core): “The Pulse Engine”
+*   **3D Map + Pulse Visualization**
+*   **Search for Movies → Pulse**
+*   **Global & Nearby Trending**
+*   **Guest Mode (No Login)**
+
+### 🎯 Version 2: “Topics + Time Layer”
+*   **Universal Objects**: Tweets, URLs, News, Topics.
+*   **Time Decay**: Pulses fade over time.
+*   **Reaction Types**: ❤️ 🔥 😭 🤣 😡
+
+### 🎯 Version 3: “Personalisation + Culture Graph”
+*   **User Profiles & History**
+*   **Topic Subscriptions**
+*   **City Leaderboards**
+
+### 🎯 Version 4: “The Multi-Object Universe”
+*   **Music, Books, Games, Events**
+*   **Viral "Pulse Stories"**
 
 ## 🛠️ Tech Stack
+- **Framework**: Next.js
+- **Map**: Mapbox GL JS / React Map GL
+- **Database**: SQLite (via Prisma)
+- **Styling**: Tailwind CSS (Minimalist, Dark Mode)
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
-- **Database**: [Turso](https://turso.tech/) (SQLite/LibSQL)
-- **Map**: [Mapbox GL JS](https://docs.mapbox.com/mapbox-gl-js/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Framer Motion](https://www.framer.com/motion/)
-- **Data Fetching**: [TanStack Query](https://tanstack.com/query/latest)
+## 🏃‍♂️ Getting Started
 
-## ⚡ Getting Started
-
-### Prerequisites
-- Node.js 18+
-- A [Mapbox](https://mapbox.com) account (for the public token).
-- A [Turso](https://turso.tech) database (optional for local dev, required for production).
-
-### Installation
-
-1.  **Clone the repo**:
-    ```bash
-    git clone https://github.com/yourusername/cinepulse.git
-    cd cinepulse
-    ```
-
-2.  **Install dependencies**:
+1.  Install dependencies:
     ```bash
     npm install
     ```
-
-3.  **Environment Setup**:
-    Create a `.env.local` file in the root directory:
-    ```env
-    NEXT_PUBLIC_MAPBOX_TOKEN="pk.your_mapbox_token_here"
-    
-    # Optional: For Cloud DB (defaults to local file if missing)
-    TURSO_DATABASE_URL="libsql://your-db.turso.io"
-    TURSO_AUTH_TOKEN="your-turso-token"
-    ```
-
-4.  **Run Development Server**:
+2.  Run the development server:
     ```bash
     npm run dev
     ```
-    Open [http://localhost:3000](http://localhost:3000).
-
-## 🗺️ Roadmap
-
-### Phase 1: MVP (Completed ✅)
-- [x] Basic Map Interface
-- [x] Movie Search & "Hearting"
-- [x] Guest User System
-- [x] SQLite/Turso Integration
-- [x] Zoom-to-Reveal Side Panel
-
-### Phase 2: Enhanced Interaction (Coming Soon)
-- [ ] **User Accounts**: Optional login to track your personal history.
-- [ ] **Filters**: Filter map by Genre (e.g., "Where are people watching Horror movies?").
-- [ ] **Time Travel**: See what was trending last month or last year.
-
-### Phase 3: Mobile & Social
-- [ ] **PWA Support**: Installable on mobile devices.
-- [ ] **Friend Activity**: See what your friends are watching on the map.
-- [ ] **City Leaderboards**: "Top Movies in Tokyo vs. New York".
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## 📄 License
-
-MIT License.
+3.  Open [http://localhost:3000](http://localhost:3000)
