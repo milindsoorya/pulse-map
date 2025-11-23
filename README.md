@@ -6,32 +6,22 @@
 See what the world feels right now. No clutter, just the pulse of the planet.
 
 ## 🚀 Roadmap
+See [ROADMAP.md](./ROADMAP.md) for the detailed project vision and future plans.
 
-### 🎯 Version 1 (Core): “The Pulse Engine”
-*   **3D Map + Pulse Visualization**
-*   **Search for Movies → Pulse**
-*   **Global & Nearby Trending**
-*   **Guest Mode (No Login)**
-
-### 🎯 Version 2: “Topics + Time Layer”
-*   **Universal Objects**: Tweets, URLs, News, Topics.
-*   **Time Decay**: Pulses fade over time.
-*   **Reaction Types**: ❤️ 🔥 😭 🤣 😡
-
-### 🎯 Version 3: “Personalisation + Culture Graph”
-*   **User Profiles & History**
-*   **Topic Subscriptions**
-*   **City Leaderboards**
-
-### 🎯 Version 4: “The Multi-Object Universe”
-*   **Music, Books, Games, Events**
-*   **Viral "Pulse Stories"**
+### Current Features (Phase 1 & 2)
+*   **3D Map + Pulse Visualization**: Interactive globe with real-time pulses.
+*   **Movie Integration**: Search and "heart" movies to create pulses.
+*   **Topic Pulses**: Support for general topics and discussions.
+*   **Filters**: Toggle between Movies and Topics.
+*   **Sidebar**: Trending and Nearby pulses with click-to-fly functionality.
+*   **Guest Mode**: No login required for core experience.
 
 ## 🛠️ Tech Stack
-- **Framework**: Next.js
-- **Map**: Mapbox GL JS / React Map GL
-- **Database**: SQLite (via Prisma)
-- **Styling**: Tailwind CSS (Minimalist, Dark Mode)
+- **Framework**: Next.js 15 (App Router)
+- **Map**: Mapbox GL JS
+- **Database**: Turso (LibSQL)
+- **Styling**: Tailwind CSS v4
+- **State Management**: React Query
 
 ## 🏃‍♂️ Getting Started
 
@@ -39,8 +29,16 @@ See what the world feels right now. No clutter, just the pulse of the planet.
     ```bash
     npm install
     ```
-2.  Run the development server:
+2.  Set up environment variables:
+    Create a `.env.local` file with:
+    ```
+    NEXT_PUBLIC_MAPBOX_TOKEN=your_token
+    TURSO_DATABASE_URL=your_url
+    TURSO_AUTH_TOKEN=your_token
+    TMDB_API_KEY=your_key
+    ```
+3.  Run the development server:
     ```bash
     npm run dev
     ```
-3.  Open [http://localhost:3000](http://localhost:3000)
+4.  Open [http://localhost:3000](http://localhost:3000)
