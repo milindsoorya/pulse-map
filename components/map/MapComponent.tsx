@@ -15,9 +15,10 @@ interface Pulse {
     lng: number;
     title: string;
     posterPath: string;
+    genre?: string;
 }
 
-export function MapComponent() {
+export function MapComponent({ genre }: { genre?: string }) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -27,9 +28,12 @@ export function MapComponent() {
     const [visiblePulses, setVisiblePulses] = useState<Pulse[]>([]);
 
     const { data: pulsesData } = useQuery({
-        queryKey: ["pulses"],
+        queryKey: ["pulses", genre],
         queryFn: async () => {
-            const res = await fetch("/api/pulse");
+            const url = genre && genre !== "All"
+                ? `/api/pulse?genre=${encodeURIComponent(genre)}`
+                : "/api/pulse";
+            const res = await fetch(url);
             if (!res.ok) return { pulses: [] };
             return res.json();
         },
@@ -162,6 +166,7 @@ export function MapComponent() {
                                     <div>
                                         <h4 className="font-medium text-white text-sm">{pulse.title}</h4>
                                         <p className="text-xs text-white/50 mt-1">Detected here</p>
+                                        {pulse.genre && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded mt-1 inline-block">{pulse.genre}</span>}
                                     </div>
                                 </div>
                             ))}

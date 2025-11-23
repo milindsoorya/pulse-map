@@ -18,7 +18,8 @@ export async function POST(request: Request) {
             posterPath: movieData.poster_path,
             lat: lat || 0,
             lng: lng || 0,
-            countryCode: countryCode || "Unknown"
+            countryCode: countryCode || "Unknown",
+            genre: movieData.genre || "Unknown"
         });
 
         return NextResponse.json({ status: "added" });
@@ -29,9 +30,12 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const genre = searchParams.get("genre") || undefined;
+
     try {
-        const pulses = await getPulses();
+        const pulses = await getPulses(100, genre);
         return NextResponse.json({ pulses });
     } catch (error) {
         console.error(error);

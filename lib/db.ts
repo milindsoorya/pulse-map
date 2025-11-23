@@ -19,9 +19,17 @@ export async function initDB() {
             lat REAL,
             lng REAL,
             countryCode TEXT,
+            genre TEXT,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+  // Migration for existing tables (idempotent-ish)
+  try {
+    await db.execute("ALTER TABLE pulses ADD COLUMN genre TEXT");
+  } catch (e) {
+    // Ignore error if column already exists
+  }
 }
 
 // Run init immediately (fire and forget for now, or call in instrumentation)
@@ -35,28 +43,41 @@ export interface Pulse {
   lat: number;
   lng: number;
   countryCode: string;
+  genre?: string;
   createdAt: string;
 }
 
 export async function addPulse(pulse: Omit<Pulse, 'id' | 'createdAt'>) {
   await db.execute({
-    sql: `INSERT INTO pulses (movieId, title, posterPath, lat, lng, countryCode)
-          VALUES (:movieId, :title, :posterPath, :lat, :lng, :countryCode)`,
+    sql: `INSERT INTO pulses (movieId, title, posterPath, lat, lng, countryCode, genre)
+          VALUES (:movieId, :title, :posterPath, :lat, :lng, :countryCode, :genre)`,
     args: {
       movieId: pulse.movieId,
       title: pulse.title,
       posterPath: pulse.posterPath,
       lat: pulse.lat,
       lng: pulse.lng,
-      countryCode: pulse.countryCode
+      countryCode: pulse.countryCode,
+      genre: pulse.genre || null
     }
   });
 }
 
-export async function getPulses(limit = 100): Promise<Pulse[]> {
+export async function getPulses(limit = 100, genre?: string): Promise<Pulse[]> {
+  let sql = 'SELECT * FROM pulses';
+  const args: any[] = [];
+
+  if (genre && genre !== 'All') {
+    sql += ' WHERE genre = ?';
+    args.push(genre);
+  }
+
+  sql += ' ORDER BY createdAt DESC LIMIT ?';
+  args.push(limit);
+
   const result = await db.execute({
-    sql: 'SELECT * FROM pulses ORDER BY createdAt DESC LIMIT ?',
-    args: [limit]
+    sql,
+    args
   });
 
   return result.rows as unknown as Pulse[];
