@@ -12,7 +12,7 @@ export default function Home() {
       </div>
 
       {/* UI Layer - Minimal Overlay */}
-      <div className="absolute inset-0 z-10">
+      <div className="absolute inset-0 z-10 pointer-events-none">
         <PulseOverlay />
       </div>
     </main>

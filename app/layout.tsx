@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CinePulse - Global Cultural Map",
+  title: "Pulse Map",
   description: "Real-time cultural map for Movies, Music, and Books.",
 };
 

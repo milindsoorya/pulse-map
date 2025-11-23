@@ -19,7 +19,7 @@ export default function Map3D() {
         if (!map.current || markersRef.current[pulse.id]) return;
 
         // Debug logging
-        // console.log('Adding pulse:', pulse.title, pulse.latitude, pulse.longitude);
+        console.log(`Adding pulse: ${pulse.title} at [${pulse.longitude}, ${pulse.latitude}]`);
 
         if (!pulse.latitude || !pulse.longitude || (pulse.latitude === 0 && pulse.longitude === 0)) {
             console.warn('Invalid coordinates for pulse:', pulse);
@@ -87,6 +87,14 @@ export default function Map3D() {
                 zoom: 1.8,
                 attributionControl: false,
                 logoPosition: 'bottom-right',
+                interactive: true,
+                dragPan: true,
+                scrollZoom: true,
+                boxZoom: true,
+                dragRotate: true,
+                keyboard: true,
+                doubleClickZoom: true,
+                touchZoomRotate: true,
             });
 
             map.current.on('load', () => {

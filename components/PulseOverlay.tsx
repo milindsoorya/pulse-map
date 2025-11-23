@@ -13,6 +13,9 @@ export default function PulseOverlay() {
     const [showTrending, setShowTrending] = useState(false);
     const [trendingPulses, setTrendingPulses] = useState<any[]>([]);
     const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+    const [showNearby, setShowNearby] = useState(false);
+    const [nearbyPulses, setNearbyPulses] = useState<any[]>([]);
+    const [isLoadingNearby, setIsLoadingNearby] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
     // --- Data Fetching Logic ---
@@ -28,6 +31,23 @@ export default function PulseOverlay() {
         };
         fetchData();
     }, [showTrending]);
+
+    // --- Nearby Data Fetching ---
+    useEffect(() => {
+        if (!showNearby) return;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            setIsLoadingNearby(true);
+            try {
+                const { latitude, longitude } = pos.coords;
+                const res = await fetch(`/api/pulse/nearby?latitude=${latitude}&longitude=${longitude}&radius=1000`);
+                const data = await res.json();
+                setNearbyPulses(data.nearby || []);
+            } catch (e) { console.error(e); } finally { setIsLoadingNearby(false); }
+        }, () => {
+            setToast({ message: 'Location required for Nearby', type: 'error' });
+            setShowNearby(false);
+        });
+    }, [showNearby]);
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -90,8 +110,8 @@ export default function PulseOverlay() {
         <div className="w-full h-full pointer-events-none flex flex-col justify-between p-4 md:p-8">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Header (Title Only) */}
-            <div className="w-full flex flex-col items-center gap-4 pointer-events-auto z-50 pt-8">
+            {/* Header (Title Only) - Changed to pointer-events-none to avoid blocking map */}
+            <div className="w-full flex flex-col items-center gap-4 pointer-events-none z-50 pt-8">
                 <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 drop-shadow-2xl select-none">
                     PULSE
                 </h1>
@@ -157,11 +177,20 @@ export default function PulseOverlay() {
 
                     {/* Trending Toggle */}
                     <button
-                        onClick={() => setShowTrending(!showTrending)}
+                        onClick={() => { setShowTrending(!showTrending); setShowNearby(false); }}
                         className={`p-3 rounded-full hover:bg-white/10 transition-colors ${showTrending ? 'text-pink-500 bg-white/10' : 'text-white/70 hover:text-white'}`}
                         title="Trending"
                     >
                         <TrendingUp className="w-5 h-5" />
+                    </button>
+
+                    {/* Nearby Toggle */}
+                    <button
+                        onClick={() => { setShowNearby(!showNearby); setShowTrending(false); }}
+                        className={`p-3 rounded-full hover:bg-white/10 transition-colors ${showNearby ? 'text-blue-400 bg-white/10' : 'text-white/70 hover:text-white'}`}
+                        title="Nearby"
+                    >
+                        <MapPin className="w-5 h-5" />
                     </button>
 
                     {/* Pulse Button (Only shows when ready) */}
@@ -206,6 +235,40 @@ export default function PulseOverlay() {
                                 <div>
                                     <p className="text-white font-medium">{p.title}</p>
                                     <p className="text-white/40 text-xs">{p.pulse_count} pulses</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Nearby Drawer (Right - Same position as Trending) */}
+            <div className={`fixed right-0 top-0 bottom-0 w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 pt-24 overflow-y-auto pointer-events-auto ${showNearby ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-400" /> Nearby</h2>
+                    <button onClick={() => setShowNearby(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5 text-white/50" /></button>
+                </div>
+
+                {isLoadingNearby ? (
+                    <div className="flex justify-center"><Loader2 className="w-8 h-8 text-white/20 animate-spin" /></div>
+                ) : nearbyPulses.length === 0 ? (
+                    <div className="text-white/40 text-center">No pulses nearby. Be the first!</div>
+                ) : (
+                    <div className="space-y-3">
+                        {nearbyPulses.map((p, i) => (
+                            <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-default"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('fly-to-location', {
+                                        detail: { lat: p.latitude, lng: p.longitude, zoom: 14 }
+                                    }));
+                                }}
+                            >
+                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+                                    {Math.round(p.distance)}m
+                                </div>
+                                <div>
+                                    <p className="text-white font-medium">{p.title}</p>
+                                    <p className="text-white/40 text-xs">{p.type}</p>
                                 </div>
                             </div>
                         ))}
