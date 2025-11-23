@@ -3,7 +3,14 @@
 > **A real-time, global pulse of movies, music, memes, topics, and events—visualized on an interactive world map.**
 
 ## 🧭 Vision
-See what the world feels right now. No clutter, just the pulse of the planet.
+> **A live "what’s the world into right now?" engine, organised by place.**
+
+We are building a tool that answers the questions people already have:
+*   *"What should I watch/listen to right now?"*
+*   *"What's blowing up in my city?"*
+*   *"Is this thing I love actually spreading?"*
+
+No clutter, just the pulse of the planet.
 
 ## 🚀 Roadmap
 See [ROADMAP.md](./ROADMAP.md) for the detailed project vision and future plans.
