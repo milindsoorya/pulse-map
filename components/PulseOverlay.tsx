@@ -10,6 +10,56 @@ export default function PulseOverlay() {
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isPulsing, setIsPulsing] = useState(false);
     const [showTrending, setShowTrending] = useState(false);
+    const [trendingPulses, setTrendingPulses] = useState<any[]>([]);
+    const [nearbyPulses, setNearbyPulses] = useState<any[]>([]);
+    const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    // Get user location on mount
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (err) => {
+                console.error('Error getting location:', err);
+            }
+        );
+    }, []);
+
+    // Fetch trending and nearby data when slider opens
+    useEffect(() => {
+        if (!showTrending) return;
+
+        const fetchData = async () => {
+            setIsLoadingTrending(true);
+            try {
+                // Fetch trending
+                const trendingRes = await fetch('/api/pulse/trending');
+                const trendingData = await trendingRes.json();
+                setTrendingPulses(trendingData.trending || []);
+
+                // Fetch nearby if we have user location
+                if (userLocation) {
+                    const nearbyRes = await fetch(
+                        `/api/pulse/nearby?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50`
+                    );
+                    const nearbyData = await nearbyRes.json();
+                    setNearbyPulses(nearbyData.nearby || []);
+                }
+            } catch (err) {
+                console.error('Error fetching trending/nearby:', err);
+            } finally {
+                setIsLoadingTrending(false);
+            }
+        };
+
+        fetchData();
+    }, [showTrending, userLocation]);
 
     // Debounced search (TMDB + Topic suggestion)
     useEffect(() => {
@@ -69,23 +119,32 @@ export default function PulseOverlay() {
                     })
                 });
 
-                alert('Pulsed!');
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
                 setSelectedItem(null);
                 setSearchQuery('');
                 setSearchResults([]);
+                setIsPulsing(false);
             }, (err) => {
                 console.error(err);
                 alert('Could not get location');
+                setIsPulsing(false);
             });
         } catch (err) {
             console.error(err);
-        } finally {
             setIsPulsing(false);
         }
     };
 
     return (
         <div className="w-full h-full flex flex-col justify-between p-6 pointer-events-none">
+            {/* Success Message */}
+            {showSuccess && (
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg pointer-events-auto z-50 animate-pulse">
+                    ✓ Pulse created successfully!
+                </div>
+            )}
+
             {/* Top Bar */}
             <div className="flex justify-between items-start w-full pointer-events-auto relative">
                 {/* Brand */}
@@ -168,37 +227,67 @@ export default function PulseOverlay() {
             </div>
 
             {/* Trending Sidebar (Right) */}
-            <div className={`absolute right-0 top-20 bottom-20 w-64 bg-black/80 backdrop-blur-xl border-l border-white/10 transform transition-transform duration-300 pointer-events-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`absolute right-0 top-20 bottom-20 w-64 bg-black/80 backdrop-blur-xl border-l border-white/10 transform transition-transform duration-300 pointer-events-auto overflow-y-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-4">
                     <h3 className="text-white font-bold mb-4 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-pink-500" /> Global Trending
                     </h3>
-                    <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="text-white/30 font-mono text-sm">0{i}</div>
-                                <div>
-                                    <div className="text-white text-sm font-medium">Inception</div>
-                                    <div className="text-white/40 text-xs">1.2k pulses</div>
+                    {isLoadingTrending ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+                        </div>
+                    ) : trendingPulses.length > 0 ? (
+                        <div className="space-y-4">
+                            {trendingPulses.map((item, i) => (
+                                <div key={item.id} className="flex items-center gap-3">
+                                    <div className="text-white/30 font-mono text-sm">
+                                        {String(i + 1).padStart(2, '0')}
+                                    </div>
+                                    <div>
+                                        <div className="text-white text-sm font-medium truncate">
+                                            {item.title}
+                                        </div>
+                                        <div className="text-white/40 text-xs">
+                                            {item.pulse_count} pulse{item.pulse_count !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-white/40 text-sm">No trending pulses yet</div>
+                    )}
 
                     <h3 className="text-white font-bold mt-8 mb-4 flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-blue-500" /> Near You
                     </h3>
-                    <div className="space-y-4">
-                        {[1, 2].map((i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="text-white/30 font-mono text-sm">0{i}</div>
-                                <div>
-                                    <div className="text-white text-sm font-medium">Local Event</div>
-                                    <div className="text-white/40 text-xs">300 pulses</div>
+                    {isLoadingTrending ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+                        </div>
+                    ) : nearbyPulses.length > 0 ? (
+                        <div className="space-y-4">
+                            {nearbyPulses.map((item, i) => (
+                                <div key={`${item.id}-${i}`} className="flex items-center gap-3">
+                                    <div className="text-white/30 font-mono text-sm">
+                                        {String(i + 1).padStart(2, '0')}
+                                    </div>
+                                    <div>
+                                        <div className="text-white text-sm font-medium truncate">
+                                            {item.title}
+                                        </div>
+                                        <div className="text-white/40 text-xs">
+                                            {Math.round(item.distance)} km • {item.pulse_count} pulse{item.pulse_count !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : !userLocation ? (
+                        <div className="text-white/40 text-sm">Location unavailable</div>
+                    ) : (
+                        <div className="text-white/40 text-sm">No nearby pulses</div>
+                    )}
                 </div>
             </div>
 
