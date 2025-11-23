@@ -74,6 +74,7 @@ export default function PulseOverlay() {
         try {
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const { latitude, longitude } = pos.coords;
+                console.log('PulseOverlay: Got location', { latitude, longitude });
 
                 const newPulse = {
                     id: `temp-${Date.now()}`,

@@ -1,4 +1,3 @@
-// components/Map3D.tsx
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -19,23 +18,37 @@ export default function Map3D() {
         if (!map.current || markersRef.current[pulse.id]) return;
 
         // Debug logging
-        console.log(`Adding pulse: ${pulse.title} at [${pulse.longitude}, ${pulse.latitude}]`);
+        console.log(`Adding pulse: ${pulse.title}`, {
+            id: pulse.id,
+            lat: pulse.latitude,
+            lng: pulse.longitude,
+            latType: typeof pulse.latitude,
+            lngType: typeof pulse.longitude
+        });
 
         if (!pulse.latitude || !pulse.longitude || (pulse.latitude === 0 && pulse.longitude === 0)) {
             console.warn('Invalid coordinates for pulse:', pulse);
             return;
         }
 
-        const el = document.createElement('div');
-        el.className = 'pulse-marker';
-        el.style.width = '20px';
-        el.style.height = '20px';
-        el.style.backgroundColor = pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'; // Pink or Blue
-        el.style.borderRadius = '50%';
-        el.style.boxShadow = `0 0 15px ${pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'}`;
-        el.style.opacity = '0.8';
-        el.style.animation = 'pulse-animation 2s infinite';
-        el.style.cursor = 'pointer';
+        // CSS Fix: Wrap in container to separate Mapbox positioning from animation
+        const container = document.createElement('div');
+        container.className = 'pulse-container';
+        // Important: No transform or positioning styles on the container
+        // Mapbox handles the positioning via transform
+
+        const inner = document.createElement('div');
+        inner.className = 'pulse-inner';
+        inner.style.width = '20px';
+        inner.style.height = '20px';
+        inner.style.backgroundColor = pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'; // Pink or Blue
+        inner.style.borderRadius = '50%';
+        inner.style.boxShadow = `0 0 15px ${pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'}`;
+        inner.style.opacity = '0.8';
+        inner.style.animation = 'pulse-animation 2s infinite';
+        inner.style.cursor = 'pointer';
+
+        container.appendChild(inner);
 
         // Create popup
         const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'glass-popup' })
@@ -47,7 +60,7 @@ export default function Map3D() {
             `);
 
         const marker = new mapboxgl.Marker({
-            element: el,
+            element: container,
             anchor: 'center'
         })
             .setLngLat([pulse.longitude, pulse.latitude])
