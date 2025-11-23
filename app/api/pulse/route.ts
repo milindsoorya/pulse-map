@@ -24,10 +24,47 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { objectId, latitude, longitude, reactionType } = body;
+        const { objectId, objectType, title, latitude, longitude, reactionType } = body;
 
-        if (!objectId || !latitude || !longitude) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!latitude || !longitude) {
+            return NextResponse.json({ error: 'Missing location' }, { status: 400 });
+        }
+
+        let finalObjectId = objectId;
+
+        // If we have object details but no ID (or we want to ensure it exists), create/find it
+        if (objectType && title) {
+            // Check if it exists (by externalId or title+type)
+            // For simplicity in V1/V2, we'll just create it if we don't have an ID provided
+            // In a real app, we'd check for duplicates.
+
+            if (!finalObjectId) {
+                finalObjectId = randomUUID();
+                await db.execute({
+                    sql: `INSERT INTO pulse_objects (id, type, title, created_at) VALUES (?, ?, ?, unixepoch())`,
+                    args: [finalObjectId, objectType, title]
+                });
+            } else {
+                // Ensure it exists (ignore if exists)
+                // For movies, we might have passed the TMDB ID as objectId.
+                // Let's try to insert, ignore on conflict if we had a unique constraint (we don't yet).
+                // So let's just check.
+                const existing = await db.execute({
+                    sql: `SELECT id FROM pulse_objects WHERE id = ?`,
+                    args: [finalObjectId]
+                });
+
+                if (existing.rows.length === 0) {
+                    await db.execute({
+                        sql: `INSERT INTO pulse_objects (id, type, title, external_id, created_at) VALUES (?, ?, ?, ?, unixepoch())`,
+                        args: [finalObjectId, objectType, title, objectId] // Use objectId as externalId for movies
+                    });
+                }
+            }
+        }
+
+        if (!finalObjectId) {
+            return NextResponse.json({ error: 'Missing object ID or details' }, { status: 400 });
         }
 
         const id = randomUUID();
@@ -37,7 +74,7 @@ export async function POST(request: Request) {
         INSERT INTO pulses (id, object_id, latitude, longitude, reaction_type)
         VALUES (?, ?, ?, ?, ?)
       `,
-            args: [id, objectId, latitude, longitude, reactionType || 'HEART']
+            args: [id, finalObjectId, latitude, longitude, reactionType || 'HEART']
         });
 
         return NextResponse.json({ success: true, id });

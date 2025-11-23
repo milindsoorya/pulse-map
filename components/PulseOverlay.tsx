@@ -1,17 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Globe, Menu, Loader2 } from 'lucide-react';
+import { Search, Heart, Globe, Menu, Loader2, Hash, Film } from 'lucide-react';
+
+type Category = 'MOVIES' | 'TOPICS';
 
 export default function PulseOverlay() {
+    const [category, setCategory] = useState<Category>('MOVIES');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [selectedMovie, setSelectedMovie] = useState<any>(null);
+    const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isPulsing, setIsPulsing] = useState(false);
 
-    // Debounced search
+    // Debounced search (only for Movies)
     useEffect(() => {
+        if (category === 'TOPICS') {
+            setSearchResults([]);
+            return;
+        }
+
         const timer = setTimeout(async () => {
             if (searchQuery.length > 2) {
                 setIsSearching(true);
@@ -30,32 +38,29 @@ export default function PulseOverlay() {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+    }, [searchQuery, category]);
 
     const handlePulse = async () => {
-        if (!selectedMovie) return;
+        // For topics, the search query IS the item if nothing selected
+        const itemToPulse = category === 'TOPICS'
+            ? { title: searchQuery, type: 'TOPIC' }
+            : selectedItem;
+
+        if (!itemToPulse && category === 'MOVIES') return;
+        if (!searchQuery && category === 'TOPICS') return;
 
         setIsPulsing(true);
         try {
-            // Get user location (mock for now or browser API)
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
 
-                // 1. Create Pulse Object (if needed) - simplified for V1, we just send ID
-                // In a real app, we'd ensure the object exists first.
-                // For this demo, we'll assume the backend handles object creation or we just send metadata.
-
-                // Actually, our backend expects objectId. 
-                // We should probably have an endpoint to "ensure object" or just pass metadata to pulse endpoint.
-                // Let's update the pulse endpoint to handle "upsert" of object, or just do it here.
-                // For V1 speed, let's just send the movie ID as objectId and hope for the best (or update backend).
-
-                // Let's just send the pulse.
                 await fetch('/api/pulse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        objectId: selectedMovie.id,
+                        objectId: itemToPulse.id, // Might be undefined for new topics
+                        objectType: category === 'MOVIES' ? 'MOVIE' : 'TOPIC',
+                        title: itemToPulse.title || searchQuery,
                         latitude,
                         longitude,
                         reactionType: 'HEART'
@@ -63,7 +68,7 @@ export default function PulseOverlay() {
                 });
 
                 alert('Pulsed!');
-                setSelectedMovie(null);
+                setSelectedItem(null);
                 setSearchQuery('');
             }, (err) => {
                 console.error(err);
@@ -80,13 +85,24 @@ export default function PulseOverlay() {
         <div className="w-full h-full flex flex-col justify-between p-6 pointer-events-none">
             {/* Top Bar */}
             <div className="flex justify-between items-start w-full pointer-events-auto relative">
-                {/* Brand / Category */}
+                {/* Brand / Category Switcher */}
                 <div className="flex items-center gap-4">
                     <h1 className="text-2xl font-bold tracking-tighter text-white drop-shadow-lg">
                         PULSE
                     </h1>
-                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-xs font-medium text-white/80">
-                        MOVIES
+                    <div className="flex bg-black/40 backdrop-blur-md rounded-full border border-white/10 p-1">
+                        <button
+                            onClick={() => { setCategory('MOVIES'); setSearchQuery(''); setSelectedItem(null); }}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${category === 'MOVIES' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                        >
+                            MOVIES
+                        </button>
+                        <button
+                            onClick={() => { setCategory('TOPICS'); setSearchQuery(''); setSelectedItem(null); }}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${category === 'TOPICS' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                        >
+                            TOPICS
+                        </button>
                     </div>
                 </div>
 
@@ -96,28 +112,30 @@ export default function PulseOverlay() {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             {isSearching ? (
                                 <Loader2 className="h-4 w-4 text-white/50 animate-spin" />
-                            ) : (
+                            ) : category === 'MOVIES' ? (
                                 <Search className="h-4 w-4 text-white/50 group-focus-within:text-white transition-colors" />
+                            ) : (
+                                <Hash className="h-4 w-4 text-white/50 group-focus-within:text-white transition-colors" />
                             )}
                         </div>
                         <input
                             type="text"
                             className="bg-black/40 backdrop-blur-xl border border-white/10 text-white text-sm rounded-full block w-64 pl-10 p-2.5 focus:ring-2 focus:ring-white/20 focus:border-white/30 focus:outline-none transition-all placeholder-white/30"
-                            placeholder="Search for a movie..."
+                            placeholder={category === 'MOVIES' ? "Search for a movie..." : "Type a topic (e.g. AI, Elections)..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    {/* Search Results Dropdown */}
-                    {searchResults.length > 0 && (
+                    {/* Search Results Dropdown (Movies only) */}
+                    {category === 'MOVIES' && searchResults.length > 0 && (
                         <div className="absolute top-12 w-72 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
                             {searchResults.map((movie) => (
                                 <div
                                     key={movie.id}
                                     className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer transition-colors"
                                     onClick={() => {
-                                        setSelectedMovie(movie);
+                                        setSelectedItem(movie);
                                         setSearchResults([]);
                                         setSearchQuery(movie.title);
                                     }}
@@ -152,7 +170,7 @@ export default function PulseOverlay() {
 
             {/* Bottom / Pulse Button (Floating) */}
             <div className="flex justify-center pb-8 pointer-events-auto">
-                {selectedMovie && (
+                {(selectedItem || (category === 'TOPICS' && searchQuery.length > 0)) && (
                     <button
                         onClick={handlePulse}
                         disabled={isPulsing}
@@ -163,7 +181,9 @@ export default function PulseOverlay() {
                         ) : (
                             <Heart className="w-5 h-5 fill-black text-black group-hover:scale-110 transition-transform" />
                         )}
-                        <span>PULSE {selectedMovie.title.toUpperCase()}</span>
+                        <span>
+                            PULSE {category === 'MOVIES' ? selectedItem?.title.toUpperCase() : searchQuery.toUpperCase()}
+                        </span>
                     </button>
                 )}
             </div>
