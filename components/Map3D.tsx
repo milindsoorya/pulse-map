@@ -35,6 +35,7 @@ export default function Map3D() {
         el.style.boxShadow = `0 0 15px ${pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'}`;
         el.style.opacity = '0.8';
         el.style.animation = 'pulse-animation 2s infinite';
+        el.style.cursor = 'pointer';
 
         // Create popup
         const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'glass-popup' })
@@ -45,7 +46,10 @@ export default function Map3D() {
                 </div>
             `);
 
-        const marker = new mapboxgl.Marker(el)
+        const marker = new mapboxgl.Marker({
+            element: el,
+            anchor: 'center'
+        })
             .setLngLat([pulse.longitude, pulse.latitude])
             .setPopup(popup)
             .addTo(map.current);
@@ -82,7 +86,7 @@ export default function Map3D() {
             map.current = new mapboxgl.Map({
                 container: mapContainer.current!,
                 style: 'mapbox://styles/mapbox/dark-v11',
-                projection: 'globe',
+                projection: 'mercator',
                 center: [0, 20],
                 zoom: 1.8,
                 attributionControl: false,
@@ -132,12 +136,12 @@ export default function Map3D() {
         };
 
         const handleFlyTo = (e: any) => {
-            const { lat, lng, zoom } = e.detail;
-            if (map.current) {
+            const { latitude, longitude, zoom = 4 } = e.detail;
+            if (map.current && latitude !== undefined && longitude !== undefined) {
                 map.current.flyTo({
-                    center: [lng, lat],
-                    zoom: zoom || 4,
-                    speed: 1.5
+                    center: [longitude, latitude],
+                    zoom: zoom,
+                    speed: 1.5,
                 });
             }
         };
@@ -176,6 +180,9 @@ export default function Map3D() {
                 </div>
             )}
 
+            {/* Force load Mapbox CSS v3 to match package version */}
+            <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet" />
+
             <div
                 ref={mapContainer}
                 className="absolute inset-0 w-full h-full outline-none"
@@ -194,6 +201,10 @@ export default function Map3D() {
                     color: white;
                     border-radius: 8px;
                     padding: 0;
+                }
+                .pulse-marker {
+                    /* Only essential styles here, let Mapbox handle position */
+                    pointer-events: auto;
                 }
                 .glass-popup .mapboxgl-popup-tip {
                     border-top-color: rgba(0, 0, 0, 0.8);

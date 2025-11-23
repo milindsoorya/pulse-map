@@ -39,7 +39,7 @@ export default function PulseOverlay() {
             setIsLoadingNearby(true);
             try {
                 const { latitude, longitude } = pos.coords;
-                const res = await fetch(`/api/pulse/nearby?latitude=${latitude}&longitude=${longitude}&radius=1000`);
+                const res = await fetch(`/api/pulse/nearby?lat=${latitude}&lng=${longitude}&radius=1000`);
                 const data = await res.json();
                 setNearbyPulses(data.nearby || []);
             } catch (e) { console.error(e); } finally { setIsLoadingNearby(false); }
@@ -126,7 +126,7 @@ export default function PulseOverlay() {
                         onClick={() => {
                             navigator.geolocation.getCurrentPosition((pos) => {
                                 window.dispatchEvent(new CustomEvent('fly-to-location', {
-                                    detail: { lat: pos.coords.latitude, lng: pos.coords.longitude, zoom: 14 }
+                                    detail: { latitude: pos.coords.latitude, longitude: pos.coords.longitude, zoom: 14 }
                                 }));
                             });
                         }}
@@ -219,11 +219,11 @@ export default function PulseOverlay() {
                 ) : (
                     <div className="space-y-3">
                         {trendingPulses.map((p, i) => (
-                            <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-default"
+                            <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
                                 onClick={() => {
                                     if (p.latitude && p.longitude) {
                                         window.dispatchEvent(new CustomEvent('fly-to-location', {
-                                            detail: { lat: p.latitude, lng: p.longitude, zoom: 10 }
+                                            detail: { latitude: p.latitude, longitude: p.longitude, zoom: 10 }
                                         }));
                                         setToast({ message: `Flying to ${p.title}`, type: 'info' });
                                     } else {
@@ -256,10 +256,10 @@ export default function PulseOverlay() {
                 ) : (
                     <div className="space-y-3">
                         {nearbyPulses.map((p, i) => (
-                            <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-default"
+                            <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
                                 onClick={() => {
                                     window.dispatchEvent(new CustomEvent('fly-to-location', {
-                                        detail: { lat: p.latitude, lng: p.longitude, zoom: 14 }
+                                        detail: { latitude: p.latitude, longitude: p.longitude, zoom: 14 }
                                     }));
                                 }}
                             >
