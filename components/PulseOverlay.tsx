@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, TrendingUp, MapPin, Filter, X, Zap } from 'lucide-react';
+import { Search, Loader2, TrendingUp, MapPin, Filter, X, Zap, Navigation } from 'lucide-react';
 import Toast from './ui/Toast';
 
 export default function PulseOverlay() {
@@ -120,7 +120,7 @@ export default function PulseOverlay() {
 
             {/* Bottom Action Area (Unified) */}
             <div className="w-full flex justify-center items-end pb-8 z-50 pointer-events-none">
-                <div className="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl">
+                <div className="flex items-center gap-2 md:gap-3 pointer-events-auto bg-black/40 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl max-w-full overflow-x-auto">
 
                     {/* Current Location Button */}
                     <button
@@ -131,14 +131,14 @@ export default function PulseOverlay() {
                                 }));
                             });
                         }}
-                        className="p-3 rounded-full hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                        className="p-3 rounded-full hover:bg-white/10 transition-colors text-white/70 hover:text-white shrink-0"
                         title="Go to my location"
                     >
-                        <MapPin className="w-5 h-5" />
+                        <Navigation className="w-5 h-5" />
                     </button>
 
                     {/* Search Bar */}
-                    <div className="relative group w-64 md:w-80 transition-all focus-within:w-80 md:focus-within:w-96">
+                    <div className="relative group w-40 md:w-80 transition-all focus-within:w-56 md:focus-within:w-96">
                         <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                             {isSearching ? <Loader2 className="w-4 h-4 text-white/50 animate-spin" /> : <Search className="w-4 h-4 text-white/50" />}
                         </div>
@@ -147,7 +147,7 @@ export default function PulseOverlay() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="What's moving you?"
-                            className="w-full bg-transparent text-white rounded-full py-3 pl-10 pr-4 focus:outline-none placeholder:text-white/30"
+                            className="w-full bg-transparent text-white rounded-full py-3 pl-10 pr-4 focus:outline-none placeholder:text-white/30 text-sm md:text-base"
                         />
 
                         {/* Results Dropdown */}
@@ -174,12 +174,12 @@ export default function PulseOverlay() {
                         )}
                     </div>
 
-                    <div className="h-6 w-px bg-white/10 mx-1"></div>
+                    <div className="h-6 w-px bg-white/10 mx-1 shrink-0"></div>
 
                     {/* Trending Toggle */}
                     <button
                         onClick={() => { setShowTrending(!showTrending); setShowNearby(false); }}
-                        className={`p-3 rounded-full hover:bg-white/10 transition-colors ${showTrending ? 'text-pink-500 bg-white/10' : 'text-white/70 hover:text-white'}`}
+                        className={`p-3 rounded-full hover:bg-white/10 transition-colors shrink-0 ${showTrending ? 'text-pink-500 bg-white/10' : 'text-white/70 hover:text-white'}`}
                         title="Trending"
                     >
                         <TrendingUp className="w-5 h-5" />
@@ -188,7 +188,7 @@ export default function PulseOverlay() {
                     {/* Nearby Toggle */}
                     <button
                         onClick={() => { setShowNearby(!showNearby); setShowTrending(false); }}
-                        className={`p-3 rounded-full hover:bg-white/10 transition-colors ${showNearby ? 'text-blue-400 bg-white/10' : 'text-white/70 hover:text-white'}`}
+                        className={`p-3 rounded-full hover:bg-white/10 transition-colors shrink-0 ${showNearby ? 'text-blue-400 bg-white/10' : 'text-white/70 hover:text-white'}`}
                         title="Nearby"
                     >
                         <MapPin className="w-5 h-5" />
@@ -199,17 +199,18 @@ export default function PulseOverlay() {
                         <button
                             onClick={handlePulse}
                             disabled={isPulsing}
-                            className="ml-2 bg-white text-black px-6 py-3 rounded-full font-bold tracking-wide hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
+                            className="ml-2 bg-white text-black px-4 md:px-6 py-3 rounded-full font-bold tracking-wide hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2 text-sm shrink-0"
                         >
                             {isPulsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-black" />}
-                            <span>PULSE</span>
+                            <span className="hidden md:inline">PULSE</span>
+                            <span className="md:hidden">GO</span>
                         </button>
                     )}
                 </div>
             </div>
 
             {/* Trending Drawer (Right) */}
-            <div className={`fixed right-0 top-0 bottom-0 w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 pt-24 overflow-y-auto pointer-events-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-0 bottom-0 w-full md:w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 pt-24 overflow-y-auto pointer-events-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2"><TrendingUp className="w-5 h-5 text-pink-500" /> Trending</h2>
                     <button onClick={() => setShowTrending(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5 text-white/50" /></button>
@@ -227,6 +228,8 @@ export default function PulseOverlay() {
                                             detail: { latitude: p.latitude, longitude: p.longitude, zoom: 10 }
                                         }));
                                         setToast({ message: `Flying to ${p.title}`, type: 'info' });
+                                        // Close drawer on mobile after selection
+                                        if (window.innerWidth < 768) setShowTrending(false);
                                     } else {
                                         setToast({ message: `📍 ${p.title} - ${p.pulse_count} pulses (No location)`, type: 'info' });
                                     }
@@ -244,7 +247,7 @@ export default function PulseOverlay() {
             </div>
 
             {/* Nearby Drawer (Right - Same position as Trending) */}
-            <div className={`fixed right-0 top-0 bottom-0 w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 pt-24 overflow-y-auto pointer-events-auto ${showNearby ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-0 bottom-0 w-full md:w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 pt-24 overflow-y-auto pointer-events-auto ${showNearby ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-400" /> Nearby</h2>
                     <button onClick={() => setShowNearby(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5 text-white/50" /></button>
@@ -262,6 +265,8 @@ export default function PulseOverlay() {
                                     window.dispatchEvent(new CustomEvent('fly-to-location', {
                                         detail: { latitude: p.latitude, longitude: p.longitude, zoom: 14 }
                                     }));
+                                    // Close drawer on mobile
+                                    if (window.innerWidth < 768) setShowNearby(false);
                                 }}
                             >
                                 <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
