@@ -22,55 +22,70 @@ export default function Map3D() {
     };
 
     // --- Pulse Rendering Logic ---
+    const getTimeAgo = (timestamp: number) => {
+        if (!timestamp) return 'Just now';
+        const seconds = Math.floor((Date.now() - timestamp * 1000) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+    };
+
     const addPulseMarker = (pulse: any) => {
         if (!map.current || markersRef.current[pulse.id]) return;
 
-        // Debug logging
-        console.log(`Adding pulse: ${pulse.title}`, {
-            id: pulse.id,
-            lat: pulse.latitude,
-            lng: pulse.longitude,
-            latType: typeof pulse.latitude,
-            lngType: typeof pulse.longitude
-        });
-
         if (!pulse.latitude || !pulse.longitude || (pulse.latitude === 0 && pulse.longitude === 0)) {
-            console.warn('Invalid coordinates for pulse:', pulse);
             return;
         }
 
         // CSS Fix: Wrap in container to separate Mapbox positioning from animation
         const container = document.createElement('div');
         container.className = 'pulse-container';
-        // Important: No transform or positioning styles on the container
-        // Mapbox handles the positioning via transform
 
         const inner = document.createElement('div');
         inner.className = 'pulse-inner';
-        inner.style.width = '20px';
-        inner.style.height = '20px';
-        inner.style.backgroundColor = pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'; // Pink or Blue
+        inner.style.width = '24px';
+        inner.style.height = '24px';
+        inner.style.backgroundColor = pulse.type === 'MOVIE' ? '#ec4899' : '#3b82f6'; // Pink-500 or Blue-500
         inner.style.borderRadius = '50%';
-        inner.style.boxShadow = `0 0 15px ${pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'}`;
-        inner.style.opacity = '0.8';
+        inner.style.boxShadow = `0 0 20px ${pulse.type === 'MOVIE' ? '#ec4899' : '#3b82f6'}`;
+        inner.style.opacity = '0.9';
         inner.style.animation = 'pulse-animation 2s infinite';
         inner.style.cursor = 'pointer';
+        inner.style.border = '2px solid rgba(255,255,255,0.8)';
 
         container.appendChild(inner);
 
-        // Create popup (Mini Card)
-        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'glass-popup' })
+        const timeAgo = getTimeAgo(pulse.created_at);
+        const reactionIcon = REACTION_ICONS[pulse.reactionType || pulse.reaction_type] || '❤️';
+
+        // Create popup (Modern Glass Card)
+        const popup = new mapboxgl.Popup({
+            offset: 35,
+            closeButton: false,
+            className: 'modern-popup',
+            maxWidth: '300px'
+        })
             .setHTML(`
-                <div class="p-3 min-w-[150px]">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="text-lg">${REACTION_ICONS[pulse.reactionType || pulse.reaction_type] || '❤️'}</span>
-                        <span class="text-[10px] font-bold opacity-70 uppercase tracking-wider border border-white/20 px-1.5 py-0.5 rounded-full">${pulse.type}</span>
+                <div class="popup-card">
+                    <div class="popup-header">
+                        <div class="popup-icon">${reactionIcon}</div>
+                        <div class="popup-meta">
+                            <span class="popup-type ${pulse.type === 'MOVIE' ? 'type-movie' : 'type-topic'}">${pulse.type}</span>
+                            <span class="popup-time">${timeAgo}</span>
+                        </div>
                     </div>
-                    <h3 class="font-bold text-sm leading-tight mb-1">${pulse.title}</h3>
-                    ${pulse.comment ? `<p class="text-xs opacity-60 truncate">"${pulse.comment}"</p>` : ''}
-                    <div class="mt-2 text-[10px] text-blue-400 font-medium flex items-center gap-1">
-                        <span>Click for details</span>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <div class="popup-content">
+                        <h3 class="popup-title">${pulse.title}</h3>
+                        ${pulse.comment ? `<p class="popup-comment">"${pulse.comment}"</p>` : ''}
+                    </div>
+                    <div class="popup-footer">
+                        <button class="popup-btn">
+                            <span>View Details</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
                     </div>
                 </div>
             `);
@@ -90,13 +105,23 @@ export default function Map3D() {
                 const element = markerPopup?.getElement();
                 if (!element) return;
 
-                const content = element.querySelector('.mapboxgl-popup-content') as HTMLElement;
-                if (content) {
-                    content.addEventListener('click', (e) => {
+                const btn = element.querySelector('.popup-btn') as HTMLElement;
+                if (btn) {
+                    btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         window.dispatchEvent(new CustomEvent('open-pulse-detail', { detail: pulse }));
                     });
-                    content.style.cursor = 'pointer';
+                }
+
+                // Also allow clicking the whole card
+                const card = element.querySelector('.popup-card') as HTMLElement;
+                if (card) {
+                    card.addEventListener('click', (e) => {
+                        // If they clicked the button, don't double fire (though stopPropagation above handles it)
+                        if ((e.target as HTMLElement).closest('.popup-btn')) return;
+                        window.dispatchEvent(new CustomEvent('open-pulse-detail', { detail: pulse }));
+                    });
+                    card.style.cursor = 'pointer';
                 }
             });
         }
@@ -236,27 +261,134 @@ export default function Map3D() {
             />
 
             <style jsx global>{`
-                @keyframes pulse - animation {
-                0% { transform: scale(1); opacity: 0.8; }
-                    50% { transform: scale(1.5); opacity: 0.4; }
-                    100% { transform: scale(1); opacity: 0.8; }
-            }
-                .glass - popup.mapboxgl - popup - content {
-                    background: rgba(0, 0, 0, 0.8);
-                    backdrop- filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        border - radius: 8px;
-        padding: 0;
-    }
-                .pulse - marker {
-        /* Only essential styles here, let Mapbox handle position */
-        pointer - events: auto;
-    }
-                .glass - popup.mapboxgl - popup - tip {
-        border - top - color: rgba(0, 0, 0, 0.8);
-    }
-    `}</style>
+                @keyframes pulse-animation {
+                    0% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+                    70% { transform: scale(1.1); opacity: 0.7; box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0); }
+                    100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+                }
+
+                /* Modern Popup Styles */
+                .modern-popup .mapboxgl-popup-content {
+                    background: rgba(10, 10, 10, 0.85);
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 16px;
+                    padding: 0;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+                    overflow: hidden;
+                    color: white;
+                }
+                
+                .modern-popup .mapboxgl-popup-tip {
+                    border-top-color: rgba(10, 10, 10, 0.85);
+                }
+
+                .popup-card {
+                    padding: 16px;
+                    min-width: 220px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .popup-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+
+                .popup-icon {
+                    font-size: 24px;
+                    line-height: 1;
+                    filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+                }
+
+                .popup-meta {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: 2px;
+                }
+
+                .popup-type {
+                    font-size: 9px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    padding: 2px 6px;
+                    border-radius: 99px;
+                    border: 1px solid rgba(255,255,255,0.2);
+                }
+                
+                .type-movie { background: rgba(236, 72, 153, 0.2); color: #fbcfe8; border-color: rgba(236, 72, 153, 0.4); }
+                .type-topic { background: rgba(59, 130, 246, 0.2); color: #bfdbfe; border-color: rgba(59, 130, 246, 0.4); }
+
+                .popup-time {
+                    font-size: 10px;
+                    color: rgba(255,255,255,0.5);
+                    font-weight: 500;
+                }
+
+                .popup-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                .popup-title {
+                    font-size: 15px;
+                    font-weight: 700;
+                    line-height: 1.3;
+                    color: #fff;
+                    margin: 0;
+                }
+
+                .popup-comment {
+                    font-size: 12px;
+                    line-height: 1.5;
+                    color: rgba(255,255,255,0.7);
+                    font-style: italic;
+                    margin: 0;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    padding-left: 8px;
+                    border-left: 2px solid rgba(255,255,255,0.2);
+                }
+
+                .popup-footer {
+                    margin-top: 4px;
+                }
+
+                .popup-btn {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    background: rgba(255,255,255,0.1);
+                    border: none;
+                    border-radius: 8px;
+                    padding: 8px;
+                    color: white;
+                    font-size: 11px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .popup-btn:hover {
+                    background: rgba(255,255,255,0.2);
+                    transform: translateY(-1px);
+                }
+
+                .pulse-marker {
+                    pointer-events: auto;
+                }
+            `}</style>
         </div>
     );
 }
