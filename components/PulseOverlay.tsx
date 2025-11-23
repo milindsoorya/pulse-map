@@ -157,7 +157,7 @@ export default function PulseOverlay() {
             </div>
 
             {/* Trending Drawer (Right) */}
-            <div className={`fixed right-0 top-0 bottom-0 w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 overflow-y-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-0 bottom-0 w-80 glass-panel border-l border-white/10 transform transition-transform duration-500 ease-out z-40 p-6 overflow-y-auto pointer-events-auto ${showTrending ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2"><TrendingUp className="w-5 h-5 text-pink-500" /> Trending</h2>
                     <button onClick={() => setShowTrending(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5 text-white/50" /></button>
@@ -170,9 +170,14 @@ export default function PulseOverlay() {
                         {trendingPulses.map((p, i) => (
                             <div key={i} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-default"
                                 onClick={() => {
-                                    // Dispatch fly-to event if location data exists (mocking for now if needed, or using real data)
-                                    // Ideally, trending API should return location. For now, we just toast.
-                                    setToast({ message: `📍 ${p.title} - ${p.pulse_count} pulses`, type: 'info' });
+                                    if (p.latitude && p.longitude) {
+                                        window.dispatchEvent(new CustomEvent('fly-to-location', {
+                                            detail: { lat: p.latitude, lng: p.longitude, zoom: 10 }
+                                        }));
+                                        setToast({ message: `Flying to ${p.title}`, type: 'info' });
+                                    } else {
+                                        setToast({ message: `📍 ${p.title} - ${p.pulse_count} pulses (No location)`, type: 'info' });
+                                    }
                                 }}
                             >
                                 <span className="text-2xl font-black text-white/10 group-hover:text-white/30 transition-colors">{i + 1}</span>

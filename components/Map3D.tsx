@@ -18,6 +18,14 @@ export default function Map3D() {
     const addPulseMarker = (pulse: any) => {
         if (!map.current || markersRef.current[pulse.id]) return;
 
+        // Debug logging
+        // console.log('Adding pulse:', pulse.title, pulse.latitude, pulse.longitude);
+
+        if (!pulse.latitude || !pulse.longitude) {
+            console.warn('Invalid coordinates for pulse:', pulse);
+            return;
+        }
+
         const el = document.createElement('div');
         el.className = 'pulse-marker';
         el.style.width = '20px';

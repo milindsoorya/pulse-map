@@ -11,7 +11,9 @@ export async function GET(request: Request) {
                 o.id,
                 o.title,
                 o.type,
-                COUNT(p.id) as pulse_count
+                COUNT(p.id) as pulse_count,
+                (SELECT latitude FROM pulses WHERE object_id = o.id ORDER BY created_at DESC LIMIT 1) as latitude,
+                (SELECT longitude FROM pulses WHERE object_id = o.id ORDER BY created_at DESC LIMIT 1) as longitude
             FROM pulse_objects o
             JOIN pulses p ON o.id = p.object_id
             WHERE p.created_at >= ?
