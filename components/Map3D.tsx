@@ -58,6 +58,7 @@ export default function Map3D() {
         try {
             const res = await fetch('/api/pulse');
             const data = await res.json();
+            console.log('Fetched pulses:', data.pulses?.length);
             if (data.pulses) {
                 data.pulses.forEach(addPulseMarker);
             }

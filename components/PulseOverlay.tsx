@@ -97,64 +97,82 @@ export default function PulseOverlay() {
                 </h1>
             </div>
 
-            {/* Bottom Action Area (Search + Buttons) */}
-            <div className="w-full flex flex-col items-center gap-4 pointer-events-auto pb-8 z-50">
-                {/* Search Bar */}
-                <div className="relative group w-full max-w-md">
-                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                        {isSearching ? <Loader2 className="w-4 h-4 text-white/50 animate-spin" /> : <Search className="w-4 h-4 text-white/50" />}
-                    </div>
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="What's moving you?"
-                        className="w-full bg-black/30 backdrop-blur-xl border border-white/10 text-white rounded-full py-4 pl-12 pr-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/50 transition-all placeholder:text-white/20"
-                    />
+            {/* Bottom Action Area (Unified) */}
+            <div className="w-full flex justify-center items-end pb-8 z-50 pointer-events-none">
+                <div className="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl">
 
-                    {/* Results Dropdown (Opens Upwards) */}
-                    {searchResults.length > 0 && (
-                        <div className="absolute bottom-full mb-2 w-full glass-panel rounded-2xl overflow-hidden max-h-80 overflow-y-auto animate-in fade-in slide-in-from-bottom-2">
-                            {searchResults.map((item, i) => (
-                                <div
-                                    key={i}
-                                    onClick={() => { setSelectedItem(item); setSearchResults([]); setSearchQuery(item.title); }}
-                                    className="flex items-center gap-4 p-4 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"
-                                >
-                                    {item.poster_path ? (
-                                        <img src={`https://image.tmdb.org/t/p/w92${item.poster_path}`} className="w-10 h-14 rounded object-cover shadow-md" alt="" />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><span className="text-lg">#</span></div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-white font-medium truncate">{item.title}</p>
-                                        <p className="text-white/40 text-xs">{item.isTopic ? 'Topic' : 'Movie'}</p>
-                                    </div>
-                                </div>
-                            ))}
+                    {/* Current Location Button */}
+                    <button
+                        onClick={() => {
+                            navigator.geolocation.getCurrentPosition((pos) => {
+                                window.dispatchEvent(new CustomEvent('fly-to-location', {
+                                    detail: { lat: pos.coords.latitude, lng: pos.coords.longitude, zoom: 14 }
+                                }));
+                            });
+                        }}
+                        className="p-3 rounded-full hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                        title="Go to my location"
+                    >
+                        <MapPin className="w-5 h-5" />
+                    </button>
+
+                    {/* Search Bar */}
+                    <div className="relative group w-64 md:w-80 transition-all focus-within:w-80 md:focus-within:w-96">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            {isSearching ? <Loader2 className="w-4 h-4 text-white/50 animate-spin" /> : <Search className="w-4 h-4 text-white/50" />}
                         </div>
-                    )}
-                </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="What's moving you?"
+                            className="w-full bg-transparent text-white rounded-full py-3 pl-10 pr-4 focus:outline-none placeholder:text-white/30"
+                        />
 
-                {/* Action Buttons */}
-                <div className="flex items-center justify-center gap-4">
+                        {/* Results Dropdown */}
+                        {searchResults.length > 0 && (
+                            <div className="absolute bottom-full mb-4 left-0 w-full glass-panel rounded-2xl overflow-hidden max-h-80 overflow-y-auto animate-in fade-in slide-in-from-bottom-2">
+                                {searchResults.map((item, i) => (
+                                    <div
+                                        key={i}
+                                        onClick={() => { setSelectedItem(item); setSearchResults([]); setSearchQuery(item.title); }}
+                                        className="flex items-center gap-4 p-4 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"
+                                    >
+                                        {item.poster_path ? (
+                                            <img src={`https://image.tmdb.org/t/p/w92${item.poster_path}`} className="w-10 h-14 rounded object-cover shadow-md" alt="" />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><span className="text-lg">#</span></div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-medium truncate">{item.title}</p>
+                                            <p className="text-white/40 text-xs">{item.isTopic ? 'Topic' : 'Movie'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="h-6 w-px bg-white/10 mx-1"></div>
+
                     {/* Trending Toggle */}
                     <button
                         onClick={() => setShowTrending(!showTrending)}
-                        className={`glass-button p-4 rounded-full ${showTrending ? 'bg-white/20' : ''}`}
+                        className={`p-3 rounded-full hover:bg-white/10 transition-colors ${showTrending ? 'text-pink-500 bg-white/10' : 'text-white/70 hover:text-white'}`}
+                        title="Trending"
                     >
-                        <TrendingUp className="w-6 h-6 text-white" />
+                        <TrendingUp className="w-5 h-5" />
                     </button>
 
-                    {/* Pulse Button (Main Action) */}
+                    {/* Pulse Button (Only shows when ready) */}
                     {(selectedItem || searchQuery) && (
                         <button
                             onClick={handlePulse}
                             disabled={isPulsing}
-                            className="bg-white text-black px-8 py-4 rounded-full font-bold tracking-wide hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] transition-all disabled:opacity-50 disabled:scale-100 flex items-center gap-2"
+                            className="ml-2 bg-white text-black px-6 py-3 rounded-full font-bold tracking-wide hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
                         >
-                            {isPulsing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-black" />}
-                            <span>PULSE IT</span>
+                            {isPulsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-black" />}
+                            <span>PULSE</span>
                         </button>
                     )}
                 </div>
