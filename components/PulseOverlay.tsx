@@ -1,8 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, TrendingUp, MapPin, Filter, X, Zap, Navigation } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Search, Loader2, TrendingUp, MapPin, X, Zap, Navigation } from 'lucide-react';
 import Toast from './ui/Toast';
+import PulseCreationModal from './PulseCreationModal';
+import PulseDetailCard from './PulseDetailCard';
+
+interface TrendingPulse {
+    latitude: number;
+    longitude: number;
+    title: string;
+    pulse_count: number;
+}
+
+interface NearbyPulse {
+    latitude: number;
+    longitude: number;
+    title: string;
+    type: string;
+    distance: number;
+}
 
 export default function PulseOverlay() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -11,43 +29,55 @@ export default function PulseOverlay() {
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isPulsing, setIsPulsing] = useState(false);
     const [showTrending, setShowTrending] = useState(false);
-    const [trendingPulses, setTrendingPulses] = useState<any[]>([]);
-    const [isLoadingTrending, setIsLoadingTrending] = useState(false);
     const [showNearby, setShowNearby] = useState(false);
-    const [nearbyPulses, setNearbyPulses] = useState<any[]>([]);
-    const [isLoadingNearby, setIsLoadingNearby] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedPulse, setSelectedPulse] = useState<any>(null);
 
-    // --- Data Fetching Logic ---
     useEffect(() => {
-        if (!showTrending) return;
-        const fetchData = async () => {
-            setIsLoadingTrending(true);
-            try {
-                const res = await fetch('/api/pulse/trending');
-                const data = await res.json();
-                setTrendingPulses(data.trending || []);
-            } catch (e) { console.error(e); } finally { setIsLoadingTrending(false); }
+        const handleOpenDetail = (e: any) => {
+            setSelectedPulse(e.detail);
         };
-        fetchData();
-    }, [showTrending]);
+        window.addEventListener('open-pulse-detail', handleOpenDetail);
+        return () => window.removeEventListener('open-pulse-detail', handleOpenDetail);
+    }, []);
+
+    // --- Data Fetching Logic (React Query) ---
+    const { data: trendingData, isLoading: isLoadingTrending } = useQuery({
+        queryKey: ['trending'],
+        queryFn: async () => {
+            const res = await fetch('/api/pulse/trending');
+            return res.json();
+        },
+        enabled: showTrending,
+    });
+    const trendingPulses: TrendingPulse[] = trendingData?.trending || [];
 
     // --- Nearby Data Fetching ---
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
     useEffect(() => {
-        if (!showNearby) return;
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            setIsLoadingNearby(true);
-            try {
-                const { latitude, longitude } = pos.coords;
-                const res = await fetch(`/api/pulse/nearby?lat=${latitude}&lng=${longitude}&radius=1000`);
-                const data = await res.json();
-                setNearbyPulses(data.nearby || []);
-            } catch (e) { console.error(e); } finally { setIsLoadingNearby(false); }
-        }, () => {
-            setToast({ message: 'Location required for Nearby', type: 'error' });
-            setShowNearby(false);
-        });
-    }, [showNearby]);
+        if (showNearby && !userLocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => {
+                    setToast({ message: 'Location required for Nearby', type: 'error' });
+                    setShowNearby(false);
+                }
+            );
+        }
+    }, [showNearby, userLocation]);
+
+    const { data: nearbyData, isLoading: isLoadingNearby } = useQuery({
+        queryKey: ['nearby', userLocation?.lat, userLocation?.lng],
+        queryFn: async () => {
+            if (!userLocation) return { nearby: [] };
+            const res = await fetch(`/api/pulse/nearby?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=1000`);
+            return res.json();
+        },
+        enabled: showNearby && !!userLocation,
+    });
+    const nearbyPulses: NearbyPulse[] = nearbyData?.nearby || [];
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -67,9 +97,17 @@ export default function PulseOverlay() {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const handlePulse = async () => {
+    const handlePulseClick = () => {
         const item = selectedItem || { title: searchQuery, type: 'TOPIC' };
         if (!item.title) return;
+        setIsModalOpen(true);
+    };
+
+    const handleModalSubmit = async (data: { reactionType: string; comment: string; link: string }) => {
+        setIsModalOpen(false);
+        const item = selectedItem || { title: searchQuery, type: 'TOPIC' };
+        if (!item.title) return;
+
         setIsPulsing(true);
         try {
             navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -81,7 +119,10 @@ export default function PulseOverlay() {
                     title: item.title,
                     type: item.isTopic ? 'TOPIC' : 'MOVIE',
                     latitude,
-                    longitude
+                    longitude,
+                    reactionType: data.reactionType,
+                    comment: data.comment,
+                    link: data.link
                 };
 
                 // Dispatch event for Map3D to pick up instantly
@@ -96,7 +137,9 @@ export default function PulseOverlay() {
                         title: item.title,
                         latitude,
                         longitude,
-                        reactionType: 'HEART'
+                        reactionType: data.reactionType,
+                        comment: data.comment,
+                        link: data.link
                     })
                 });
                 setToast({ message: 'Pulse sent to the world!', type: 'success' });
@@ -110,6 +153,20 @@ export default function PulseOverlay() {
     return (
         <div className="w-full h-full pointer-events-none flex flex-col justify-between p-4 md:p-8">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+            <PulseCreationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSubmit={handleModalSubmit}
+                title={selectedItem?.title || searchQuery}
+            />
+
+            {selectedPulse && (
+                <PulseDetailCard
+                    pulse={selectedPulse}
+                    onClose={() => setSelectedPulse(null)}
+                />
+            )}
 
             {/* Header (Title Only) - Changed to pointer-events-none to avoid blocking map */}
             <div className="w-full flex flex-col items-center gap-4 pointer-events-none z-50 pt-8">
@@ -160,7 +217,7 @@ export default function PulseOverlay() {
                                         className="flex items-center gap-4 p-4 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"
                                     >
                                         {item.poster_path ? (
-                                            <img src={`https://image.tmdb.org/t/p/w92${item.poster_path}`} className="w-10 h-14 rounded object-cover shadow-md" alt="" />
+                                            <img src={`https://image.tmdb.org/t/p/w92${item.poster_path}`} className="w-10 h-14 rounded object-cover shadow-md" alt={item.title} />
                                         ) : (
                                             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><span className="text-lg">#</span></div>
                                         )}
@@ -197,7 +254,7 @@ export default function PulseOverlay() {
                     {/* Pulse Button (Only shows when ready) */}
                     {(selectedItem || searchQuery) && (
                         <button
-                            onClick={handlePulse}
+                            onClick={handlePulseClick}
                             disabled={isPulsing}
                             className="ml-2 bg-white text-black px-4 md:px-6 py-3 rounded-full font-bold tracking-wide hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2 text-sm shrink-0"
                         >

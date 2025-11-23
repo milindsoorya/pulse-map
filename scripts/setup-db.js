@@ -40,6 +40,8 @@ async function setup() {
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
         reaction_type TEXT DEFAULT 'HEART',
+        comment TEXT,
+        link TEXT,
         created_at INTEGER DEFAULT (unixepoch()),
         FOREIGN KEY(object_id) REFERENCES pulse_objects(id)
       );

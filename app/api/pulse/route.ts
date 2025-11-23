@@ -24,10 +24,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { objectId, objectType, title, latitude, longitude, reactionType } = body;
+        const { objectId, objectType, title, latitude, longitude, reactionType, comment, link } = body;
 
         if (!latitude || !longitude) {
             return NextResponse.json({ error: 'Missing location' }, { status: 400 });
+        }
+
+        if (comment && comment.length > 250) {
+            return NextResponse.json({ error: 'Comment too long (max 250 chars)' }, { status: 400 });
         }
 
         let finalObjectId = objectId;
@@ -71,10 +75,10 @@ export async function POST(request: Request) {
 
         await db.execute({
             sql: `
-        INSERT INTO pulses (id, object_id, latitude, longitude, reaction_type)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO pulses (id, object_id, latitude, longitude, reaction_type, comment, link)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-            args: [id, finalObjectId, latitude, longitude, reactionType || 'HEART']
+            args: [id, finalObjectId, latitude, longitude, reactionType || 'HEART', comment || null, link || null]
         });
 
         return NextResponse.json({ success: true, id });

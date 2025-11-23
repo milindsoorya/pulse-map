@@ -13,6 +13,14 @@ export default function Map3D() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const REACTION_ICONS: { [key: string]: string } = {
+        HEART: '❤️',
+        FIRE: '🔥',
+        SAD: '😭',
+        FUNNY: '🤣',
+        ANGRY: '😡',
+    };
+
     // --- Pulse Rendering Logic ---
     const addPulseMarker = (pulse: any) => {
         if (!map.current || markersRef.current[pulse.id]) return;
@@ -50,12 +58,20 @@ export default function Map3D() {
 
         container.appendChild(inner);
 
-        // Create popup
+        // Create popup (Mini Card)
         const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'glass-popup' })
             .setHTML(`
-                <div class="p-2">
-                    <h3 class="font-bold text-sm">${pulse.title}</h3>
-                    <p class="text-xs opacity-70">${pulse.type}</p>
+                <div class="p-3 min-w-[150px]">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-lg">${REACTION_ICONS[pulse.reactionType || pulse.reaction_type] || '❤️'}</span>
+                        <span class="text-[10px] font-bold opacity-70 uppercase tracking-wider border border-white/20 px-1.5 py-0.5 rounded-full">${pulse.type}</span>
+                    </div>
+                    <h3 class="font-bold text-sm leading-tight mb-1">${pulse.title}</h3>
+                    ${pulse.comment ? `<p class="text-xs opacity-60 truncate">"${pulse.comment}"</p>` : ''}
+                    <div class="mt-2 text-[10px] text-blue-400 font-medium flex items-center gap-1">
+                        <span>Click for details</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </div>
                 </div>
             `);
 
@@ -66,6 +82,18 @@ export default function Map3D() {
             .setLngLat([pulse.longitude, pulse.latitude])
             .setPopup(popup)
             .addTo(map.current);
+
+        // Add event listener to popup content for "Click for details"
+        marker.getPopup().on('open', () => {
+            const content = marker.getPopup().getElement().querySelector('.mapboxgl-popup-content');
+            if (content) {
+                content.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('open-pulse-detail', { detail: pulse }));
+                });
+                content.style.cursor = 'pointer';
+            }
+        });
 
         markersRef.current[pulse.id] = marker;
     };
