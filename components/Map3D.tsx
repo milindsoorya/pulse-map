@@ -21,7 +21,7 @@ export default function Map3D() {
         // Debug logging
         // console.log('Adding pulse:', pulse.title, pulse.latitude, pulse.longitude);
 
-        if (!pulse.latitude || !pulse.longitude) {
+        if (!pulse.latitude || !pulse.longitude || (pulse.latitude === 0 && pulse.longitude === 0)) {
             console.warn('Invalid coordinates for pulse:', pulse);
             return;
         }
