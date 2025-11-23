@@ -1,3 +1,5 @@
+'use client';
+
 import Map3D from '@/components/Map3D';
 import PulseOverlay from '@/components/PulseOverlay';
 
@@ -10,7 +12,7 @@ export default function Home() {
       </div>
 
       {/* UI Layer - Minimal Overlay */}
-      <div className="absolute inset-0 z-10 pointer-events-none">
+      <div className="absolute inset-0 z-10">
         <PulseOverlay />
       </div>
     </main>

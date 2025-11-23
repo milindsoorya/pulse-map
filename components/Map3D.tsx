@@ -1,176 +1,187 @@
+// components/Map3D.tsx
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Note: You must set NEXT_PUBLIC_MAPBOX_TOKEN in your .env.local
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 export default function Map3D() {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<mapboxgl.Map | null>(null);
-    const [loaded, setLoaded] = useState(false);
+    const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch pulses periodically
-    useEffect(() => {
-        if (!loaded || !map.current) return;
+    // --- Pulse Rendering Logic ---
+    const addPulseMarker = (pulse: any) => {
+        if (!map.current || markersRef.current[pulse.id]) return;
 
-        const fetchPulses = async () => {
-            try {
-                const res = await fetch('/api/pulse');
-                const data = await res.json();
+        const el = document.createElement('div');
+        el.className = 'pulse-marker';
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.backgroundColor = pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'; // Pink or Blue
+        el.style.borderRadius = '50%';
+        el.style.boxShadow = `0 0 15px ${pulse.type === 'MOVIE' ? '#f472b6' : '#60a5fa'}`;
+        el.style.opacity = '0.8';
+        el.style.animation = 'pulse-animation 2s infinite';
 
-                if (data.pulses) {
-                    const geojson: GeoJSON.FeatureCollection = {
-                        type: 'FeatureCollection',
-                        features: data.pulses.map((p: any) => ({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [p.longitude, p.latitude]
-                            },
-                            properties: {
-                                id: p.id,
-                                title: p.title,
-                                type: p.reaction_type
-                            }
-                        }))
-                    };
+        // Create popup
+        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'glass-popup' })
+            .setHTML(`
+                <div class="p-2">
+                    <h3 class="font-bold text-sm">${pulse.title}</h3>
+                    <p class="text-xs opacity-70">${pulse.type}</p>
+                </div>
+            `);
 
-                    const source = map.current?.getSource('pulses') as mapboxgl.GeoJSONSource;
-                    if (source) {
-                        source.setData(geojson);
-                    } else {
-                        map.current?.addSource('pulses', {
-                            type: 'geojson',
-                            data: geojson
-                        });
+        const marker = new mapboxgl.Marker(el)
+            .setLngLat([pulse.longitude, pulse.latitude])
+            .setPopup(popup)
+            .addTo(map.current);
 
-                        // Add a pulsing circle layer
-                        map.current?.addLayer({
-                            id: 'pulses-layer',
-                            type: 'circle',
-                            source: 'pulses',
-                            paint: {
-                                'circle-radius': [
-                                    'interpolate',
-                                    ['linear'],
-                                    ['zoom'],
-                                    0, 4,
-                                    5, 10
-                                ],
-                                'circle-color': '#ff0055', // Pulse color (pink/red)
-                                'circle-opacity': 0.8,
-                                'circle-blur': 0.5,
-                                'circle-stroke-width': 2,
-                                'circle-stroke-color': '#ffffff',
-                                'circle-stroke-opacity': 0.5
-                            }
-                        });
+        markersRef.current[pulse.id] = marker;
+    };
 
-                        // Add a glow effect (heatmap-like)
-                        map.current?.addLayer({
-                            id: 'pulses-heat',
-                            type: 'heatmap',
-                            source: 'pulses',
-                            maxzoom: 9,
-                            paint: {
-                                'heatmap-weight': 1,
-                                'heatmap-intensity': [
-                                    'interpolate',
-                                    ['linear'],
-                                    ['zoom'],
-                                    0, 1,
-                                    9, 3
-                                ],
-                                'heatmap-color': [
-                                    'interpolate',
-                                    ['linear'],
-                                    ['heatmap-density'],
-                                    0, 'rgba(0,0,0,0)',
-                                    0.2, 'rgba(255,0,85,0.2)',
-                                    0.4, 'rgba(255,0,85,0.4)',
-                                    0.6, 'rgba(255,0,85,0.6)',
-                                    0.8, 'rgba(255,0,85,0.8)',
-                                    1, 'rgba(255,255,255,0.9)'
-                                ],
-                                'heatmap-radius': [
-                                    'interpolate',
-                                    ['linear'],
-                                    ['zoom'],
-                                    0, 10,
-                                    9, 30
-                                ],
-                                'heatmap-opacity': 0.7
-                            }
-                        }, 'pulses-layer'); // Place behind the dots
-                    }
-                }
-            } catch (err) {
-                console.error('Error fetching pulses:', err);
+    const fetchPulses = async () => {
+        if (!map.current) return;
+        try {
+            const res = await fetch('/api/pulse');
+            const data = await res.json();
+            if (data.pulses) {
+                data.pulses.forEach(addPulseMarker);
             }
-        };
-
-        // Initial fetch
-        fetchPulses();
-
-        // Poll every 5 seconds
-        const interval = setInterval(fetchPulses, 5000);
-        return () => clearInterval(interval);
-    }, [loaded]);
+        } catch (err) {
+            console.error('Error fetching pulses:', err);
+        }
+    };
 
     useEffect(() => {
-        if (map.current || !mapContainer.current) return;
-
         if (!MAPBOX_TOKEN) {
-            console.error('Mapbox token is missing!');
+            setError('Mapbox token missing');
+            setIsLoading(false);
             return;
         }
 
-        mapboxgl.accessToken = MAPBOX_TOKEN;
+        if (map.current) return;
 
-        map.current = new mapboxgl.Map({
-            container: mapContainer.current,
-            style: 'mapbox://styles/mapbox/dark-v11', // Dark minimal style
-            projection: 'globe', // 3D Globe
-            center: [0, 20],
-            zoom: 1.5,
-            attributionControl: false,
-        });
+        try {
+            mapboxgl.accessToken = MAPBOX_TOKEN;
 
-        map.current.on('style.load', () => {
-            if (!map.current) return;
-
-            // Add atmosphere (stars/fog)
-            map.current.setFog({
-                color: 'rgb(10, 10, 20)', // Lower atmosphere
-                'high-color': 'rgb(0, 0, 0)', // Upper atmosphere
-                'horizon-blend': 0.2, // Atmosphere thickness (default 0.2 at low zooms)
-                'space-color': 'rgb(0, 0, 0)', // Background color
-                'star-intensity': 0.6, // Background star brightness (default 0.35 at low zoooms )
+            map.current = new mapboxgl.Map({
+                container: mapContainer.current!,
+                style: 'mapbox://styles/mapbox/dark-v11',
+                projection: 'globe',
+                center: [0, 20],
+                zoom: 1.8,
+                attributionControl: false,
+                logoPosition: 'bottom-right',
             });
 
-            setLoaded(true);
-        });
+            map.current.on('load', () => {
+                console.log('✅ Map loaded');
+                setIsLoading(false);
+                map.current?.resize();
+                fetchPulses(); // Initial fetch
+            });
 
-        // Clean up on unmount
-        return () => {
-            if (map.current) {
-                map.current.remove();
-                map.current = null;
+            map.current.on('error', (e) => {
+                console.error('Map error:', e);
+                setError('Map failed to load');
+                setIsLoading(false);
+            });
+
+        } catch (err) {
+            console.error('Init error:', err);
+            setError('Initialization failed');
+            setIsLoading(false);
+        }
+
+        // --- Event Listeners ---
+        const handleResize = () => map.current?.resize();
+
+        const handlePulseAdded = (e: any) => {
+            const pulse = e.detail;
+            if (pulse && map.current) {
+                addPulseMarker(pulse);
+                map.current.flyTo({
+                    center: [pulse.longitude, pulse.latitude],
+                    zoom: 4,
+                    speed: 1.5
+                });
             }
+        };
+
+        const handleFlyTo = (e: any) => {
+            const { lat, lng, zoom } = e.detail;
+            if (map.current) {
+                map.current.flyTo({
+                    center: [lng, lat],
+                    zoom: zoom || 4,
+                    speed: 1.5
+                });
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('pulse-added', handlePulseAdded);
+        window.addEventListener('fly-to-location', handleFlyTo);
+
+        // Polling
+        const interval = setInterval(fetchPulses, 5000);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('pulse-added', handlePulseAdded);
+            window.removeEventListener('fly-to-location', handleFlyTo);
+            clearInterval(interval);
+            map.current?.remove();
+            map.current = null;
         };
     }, []);
 
     return (
-        <div className="w-full h-full">
-            {!MAPBOX_TOKEN && (
-                <div className="absolute inset-0 flex items-center justify-center z-50 bg-black text-red-500">
-                    Missing NEXT_PUBLIC_MAPBOX_TOKEN
+        <div className="absolute inset-0 w-full h-full bg-black">
+            {error && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm text-red-400">
+                    <p className="font-mono text-sm">{error}</p>
                 </div>
             )}
-            <div ref={mapContainer} className="w-full h-full" />
+
+            {isLoading && !error && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black transition-opacity duration-500">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        <p className="text-white/40 text-xs tracking-widest uppercase">Initializing Satellite Link</p>
+                    </div>
+                </div>
+            )}
+
+            <div
+                ref={mapContainer}
+                className="absolute inset-0 w-full h-full outline-none"
+            />
+
+            <style jsx global>{`
+                @keyframes pulse-animation {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.5); opacity: 0.4; }
+                    100% { transform: scale(1); opacity: 0.8; }
+                }
+                .glass-popup .mapboxgl-popup-content {
+                    background: rgba(0, 0, 0, 0.8);
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    color: white;
+                    border-radius: 8px;
+                    padding: 0;
+                }
+                .glass-popup .mapboxgl-popup-tip {
+                    border-top-color: rgba(0, 0, 0, 0.8);
+                }
+            `}</style>
         </div>
     );
 }
